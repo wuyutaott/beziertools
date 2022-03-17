@@ -27,46 +27,13 @@ export default class Bezier extends cc.Component {
         this.p1 = this.node.getChildByName('p1');
         this.c1 = this.node.getChildByName('c1');
         this.c2 = this.node.getChildByName('c2');
-        this.p2 = this.node.getChildByName('p2');
-        if (!this.debug && !CC_EDITOR) {
-            this.node.active = false;
-        }
+        this.p2 = this.node.getChildByName('p2');        
         if (!CC_EDITOR) {
             this.p1.active = false;
             this.c1.active = false;
             this.c2.active = false;
-            this.p2.active = false;
-            this.draw();
+            this.p2.active = false;            
         }
-    }
-
-    update() {
-        if (!CC_EDITOR) return;
-        this.draw();
-    }
-
-    draw() {
-        if (!this.debug && !CC_EDITOR) return;      
-        if (!this.p1 || !this.c1 || !this.c2 || !this.p2) {
-            this.g.clear();
-            return;
-        }
-        if (this.p1Tracker) {                        
-            let nodePos = this.convertToNodeSpace(this.p1, this.p1Tracker);
-            this.p1.setPosition(nodePos);
-        }
-        if (this.p2Tracker) {                        
-            let nodePos = this.convertToNodeSpace(this.p2, this.p2Tracker);
-            this.p2.setPosition(nodePos);
-        }
-        let p1 = this.p1.position;             
-        let c1 = this.c1.position;
-        let c2 = this.c2.position;
-        let p2 = this.p2.position;
-        this.g.clear();
-        this.g.moveTo(p1.x, p1.y);
-        this.g.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, p2.x, p2.y);
-        this.g.stroke();
     }
 
     startMove(node: cc.Node, time: number, callback: Function = null, obsv: any = null) {
@@ -82,7 +49,7 @@ export default class Bezier extends cc.Component {
             .start();
     }
 
-    getBezierPoints(node: cc.Node) {        
+    getBezierPoints(node: cc.Node) {
         let p1 = this.convertToNodeSpace(node, this.p1);
         let c1 = this.convertToNodeSpace(node, this.c1);
         let c2 = this.convertToNodeSpace(node, this.c2);
@@ -96,17 +63,58 @@ export default class Bezier extends cc.Component {
         return [cc.v2(p1.x, p1.y), cc.v2(c1.x, c1.y), cc.v2(c2.x, c2.y), cc.v2(p2.x, p2.y)];
     }
 
+    updateTracker() {
+        if (this.p1Tracker) {                        
+            let nodePos = this.convertToNodeSpace(this.p1, this.p1Tracker);
+            this.p1.setPosition(nodePos);
+        }
+        if (this.p2Tracker) {                        
+            let nodePos = this.convertToNodeSpace(this.p2, this.p2Tracker);
+            this.p2.setPosition(nodePos);
+        }
+    }
+
+    update() {
+        if (CC_EDITOR) {
+            // 编辑器下
+            this.updateTracker();
+            this.draw();
+        }
+        else {
+            // 运行环境
+            if (this.debug) {
+                this.draw();
+            }
+        }
+    }
+
+    private draw() {
+        if (!this.debug && !CC_EDITOR) return;      
+        if (!this.p1 || !this.c1 || !this.c2 || !this.p2) {
+            this.g.clear();
+            return;
+        }
+        let p1 = this.p1.position;             
+        let c1 = this.c1.position;
+        let c2 = this.c2.position;
+        let p2 = this.p2.position;
+        this.g.clear();
+        this.g.moveTo(p1.x, p1.y);
+        this.g.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, p2.x, p2.y);
+        this.g.stroke();
+    }
+
     /**
      * 计算p2在p1坐标系中的坐标     
      */
-    convertToNodeSpace(p1: cc.Node, p2: cc.Node): cc.Vec3 {
+    private convertToNodeSpace(p1: cc.Node, p2: cc.Node): cc.Vec3 {
         return p1.parent.convertToNodeSpaceAR(p2.parent.convertToWorldSpaceAR(p2.position));
     }
 
     /**
      * 已知AB构成一个向量，求C在向量AB上的镜像点D
      */
-    calcMirrorD(A: cc.Vec3, B: cc.Vec3, C: cc.Vec3): cc.Vec3 {
+    private calcMirrorD(A: cc.Vec3, B: cc.Vec3, C: cc.Vec3): cc.Vec3 {
         let AB = B.sub(A);
         let AC = C.sub(A);
         let NAB = AB.normalize();
@@ -124,7 +132,7 @@ export default class Bezier extends cc.Component {
     /**
      * 从AB两个点构成的一条线段中，随机获取一个点
      */
-    getRandomP(A: cc.Vec3, B: cc.Vec3) {
+    private getRandomP(A: cc.Vec3, B: cc.Vec3): cc.Vec3 {
         let AB = B.sub(A);
         let RAC = AB.mul(Math.random());
         return A.add(RAC);
